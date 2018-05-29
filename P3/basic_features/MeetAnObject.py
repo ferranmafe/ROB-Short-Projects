@@ -67,7 +67,7 @@ if __name__ == '__main__':
     envia(ser,'SetMotor RWheelEnable LWheelEnable', 0.2)
     envia(ser, 'SetLDSRotation On', 0.3)
 
-    maxSpeed = 150
+    maxSpeed = 200
     maxDist = 400
 
     robotFrontDist = 245
