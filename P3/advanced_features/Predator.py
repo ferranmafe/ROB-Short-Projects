@@ -41,12 +41,19 @@ def getMinDist(info):
     for i in range(2, 362):
         if 0 < int(info[i][1]) < 16627: aux.append((int(info[i][0]), (int(info[i][1]))))
     
-    auxSet = set(aux[:][0])
-    for i in range(reversed(aux)):
+	auxlist = []
+	for i in range(len(aux)):
+		auxlist.append(aux[i][0])
+	
+    auxSet = set(auxlist)
+    i = len(aux) - 1
+    while i >= 0:
         k = 0
+        print("{} {} {}".format(i, -(numConsecSensors / 2), (numConsecSensors / 2)))
         for j in range(-(numConsecSensors / 2), (numConsecSensors / 2)):
             if (j % 360) not in auxSet: k += 1
-        if k < maxNumSensorsWithoutData: aux.remove(i)
+        if k > maxNumSensorsWithoutData: aux.pop(i)
+        --i
 
     if len(aux) > 0:
         minim = aux[0]
@@ -87,8 +94,10 @@ if __name__ == '__main__':
     try:
         while 1:
             data = informationToArray(envia(ser, 'GetLDSScan', 0.05))
+
             minDist = getMinDist(data)
             print("Min Dist: {}".format(minDist))
+            """
             if (minDist[0] <= 180):
                 k = minDist[0]/180.
             else:
@@ -97,7 +106,7 @@ if __name__ == '__main__':
             leftMotorDist = -maxDist * k + (minDist[1] - robotFrontDist)
             print("leftMotorDist: {} rightMotorDist: {}".format(rightMotorDist, leftMotorDist))
             envia(ser, 'SetMotor LWheelDist ' + str(leftMotorDist) + ' RWheelDist ' + str(rightMotorDist) + ' Speed ' + str(maxSpeed), 0.05)
-
+            """
 
     except KeyboardInterrupt:
         envia(ser, 'SetLDSRotation Off', 0.2)
