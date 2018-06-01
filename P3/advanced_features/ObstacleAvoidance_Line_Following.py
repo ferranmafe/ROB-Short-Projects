@@ -136,6 +136,7 @@ def updateOdometry():
     L_ini, R_ini = L, R
 
 def followObstacleLeft():
+    print "Entro follow Left"
     global y_w, y_w_th, maxWallSpeed, maxWallDist, thLateralDistWall, thCentralDistWall, thRangeWall
 
     avoided = False
@@ -186,8 +187,10 @@ def followObstacleLeft():
         rightMotorDist = maxWallDist * rightPercentatge
         leftMotorDist = maxWallDist * leftPercentatge
         envia(ser, 'SetMotor LWheelDist ' + str(leftMotorDist) + ' RWheelDist ' + str(rightMotorDist) + ' Speed ' + str(maxWallSpeed), 0.05)
+    print "Salgo follow Left"
 
 def followObstacleRight():
+    print "Entro follow Right"
     global y_w, y_w_th, maxWallSpeed, maxWallDist, thLateralDistWall, thCentralDistWall, thRangeWall
 
     avoided = False
@@ -238,7 +241,7 @@ def followObstacleRight():
         rightMotorDist = maxWallDist * rightPercentatge
         leftMotorDist = maxWallDist * leftPercentatge
         envia(ser, 'SetMotor LWheelDist ' + str(leftMotorDist) + ' RWheelDist ' + str(rightMotorDist) + ' Speed ' + str(maxWallSpeed), 0.05)
-
+    print "Salgo follow Right"
 
 if __name__ == '__main__':
     global ser
@@ -262,18 +265,18 @@ if __name__ == '__main__':
     Pk1 = Pk0
 
     # ObstacleAvoidance params
-    maxObsSpeed = 250
+    maxObsSpeed = 100
     maxObsCentralDist = 350
     maxObsLateralDist = 100
-    thLateralDistObs = 500
-    thCentralDistObs = 700
+    thLateralDistObs = 400
+    thCentralDistObs = 800
 
     # WallFollowing params
-    maxWallSpeed = 200
+    maxWallSpeed = 100
     maxWallDist = 500
-    thLateralDistWall = 500
-    thCentralDistWall = 900
-    thRangeWall = 30
+    thLateralDistWall = 400
+    thCentralDistWall = 800
+    thRangeWall = 20
 
     # Repositioning params
     y_w_th = 50 # 5 centimetros de margen
@@ -326,17 +329,17 @@ if __name__ == '__main__':
                     else:
                         k2 = 1 - (central / thCentralDistObs)
 
-                if k2 != 0:
+                if k3 != 0:
                     leftMotorDist = maxObsCentralDist * k1 + maxObsLateralDist * k2 - maxObsLateralDist * k3
                     rightMotorDist = maxObsCentralDist * k1 - maxObsLateralDist * k2 + maxObsLateralDist * k3
                     comando = 'SetMotor LWheelDist ' + str(leftMotorDist) + ' RWheelDist ' + str(rightMotorDist) + ' Speed ' + str(maxObsSpeed)
-                    envia(ser, comando, 0.05)
+                    #envia(ser, comando, 0.05)
                     followObstacleRight()
-                elif k3 != 0:
+                elif k2 != 0:
                     leftMotorDist = maxObsCentralDist * k1 + maxObsLateralDist * k2 - maxObsLateralDist * k3
                     rightMotorDist = maxObsCentralDist * k1 - maxObsLateralDist * k2 + maxObsLateralDist * k3
                     comando = 'SetMotor LWheelDist ' + str(leftMotorDist) + ' RWheelDist ' + str(rightMotorDist) + ' Speed ' + str(maxObsSpeed)
-                    envia(ser, comando, 0.05)
+                    #envia(ser, comando, 0.05)
 
                     followObstacleLeft()
                 else:
