@@ -151,7 +151,7 @@ def getMinDist(info, minVal, maxVal):
             if minim[1] > aux[i][1]: minim = aux[i][1]
 
         return minim
-    # Si todos sus sensores detectan -1 el robot puede tener el laser apagado lo hacemos pararse
+    # Si todos sus sensores detectan -1 el robot puede tener el laser apagado lo hacemos pararse
     else: return 0
 
 
@@ -209,7 +209,7 @@ def orientationToBase():
     if rot_ang > threshold_ang and rot_ang < (-threshold_ang % (2 * 3.1415)):
 
         # Calculamos la k responsable del giro del robot
-        # Si es menor que 180 la distancia minimoa giramos hacia la izquierda
+        # Si es menor que 180 la distancia minimoa giramos hacia la izquierda
         if (rot_ang <= 3.1415):
             k = rot_ang/3.1414
         # Si es mayor que 180 hacia la derecha por eso aparece el negativo delante
@@ -278,7 +278,7 @@ def orientationInverseToBase():
 
     if rot_ang < (3.1415 - threshold_ang ) or rot_ang > (3.1415 + threshold_ang):
         # Calculamos la k responsable del giro del robot
-        # Si es menor que 180 la distancia minimoa giramos hacia la izquierda
+        # Si es menor que 180 la distancia minimoa giramos hacia la izquierda
         if (rot_ang <= 3.1415):
             k = 1 - rot_ang/3.1414
         # Si es mayor que 180 hacia la derecha por eso aparece el negativo delante
