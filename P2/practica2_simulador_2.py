@@ -95,7 +95,6 @@ def get_motors():
 def get_laser():
 
     msg = envia(ser, 'GetLDSScan', 0.05);
-
     '''
     msg = "0,0,0,0"
     #for i in range(45, 136):
@@ -125,6 +124,46 @@ def get_laser_data():
             laser_points.append((x, -y))
     return laser_points
 
+# Obtenemos la distancia media de los valores leidos por un rango de angulos del sensor
+def getMedianDist(info, minVal, maxVal):
+    aux = []
+    if (minVal < maxVal):
+        for i in range(minVal, maxVal):
+            if 0 < int(info[i][1]) < 16627: aux.append(int(info[i][1]))
+    else:
+        for i in range(minVal, 359):
+            if 0 < int(info[i][1]) < 16627: aux.append(int(info[i][1]))
+        for i in range(2, maxVal):
+            if 0 < int(info[i][1]) < 16627: aux.append(int(info[i][1]))
+
+    if len(aux) > 0: return float(sum(aux)) / max(len(aux), 1)
+    else: return -1
+
+# Obtenemos la distancia minima y el angulo en e lque se produce
+def getMinDist(info, minVal, maxVal):
+    aux = []
+    for i in range(minVal + 2, maxVal + 2):
+        if 0 < int(info[i][1]) < 16627: aux.append((int(info[i][0]), (int(info[i][1]))))
+
+    if len(aux) > 0:
+        minim = aux[0][1]
+        for i in range(1, len(aux)):
+            if minim[1] > aux[i][1]: minim = aux[i][1]
+
+        return minim
+    # Si todos sus sensores detectan -1 el robot puede tener el laser apagado lo hacemos pararse
+    else: return 0
+
+
+# Convertimos la informacion del laser en una matriz
+def informationToArray (info):
+    aux = info.split('\n')
+    output = []
+    for elem in aux:
+        output.append(elem.split(','))
+    return output
+
+
 def iniciarVueltaBase():
     global direccion, speed, tita_dot, x_base, y_base
     # Paramos el NEATO y pedimos las coordenadas de la base de carga
@@ -153,9 +192,9 @@ def vueltaBaseCarga(estado):
     elif estado == 3:
         estado = 6
     elif estado == 4:
-        estado = 6
+        estado = orientationInverseToBase()
     elif estado == 5:
-        estado = 6
+        estado = aproachToBaseWithLaser()
     return estado
 
 def orientationToBase():
@@ -164,20 +203,26 @@ def orientationToBase():
     if (rot_ang < 0):
         rot_ang = 2 * 3.1415 + rot_ang
     rot_ang = (rot_ang - sum_theta) % (2 * 3.1415)
-    print "Rot_angle: " + str(rot_ang * 180/3.1415)
-    if rot_ang > threshold_ang and rot_ang < (-threshold_ang % (2 * 3.1415)):
-        speed = 50
-        direccion = 0
-        if (rot_ang < 3.1415):
-            tita_dot = (3.1415/10)
-        else:
-            tita_dot = -(3.1415/10)
-        print ('Speed: {} Tita_dot: {}'.format(speed, tita_dot))
-        distancia_R = (((speed * pow(-1, direccion) ) + (S * tita_dot)) * tiempo) * pow(-1, direccion)
-        distancia_L = (((speed * pow(-1, direccion) ) + (-S * tita_dot)) * tiempo) * pow(-1, direccion)
-        comando = 'SetMotor LWheelDist ' + str(distancia_L) + ' RWheelDist ' + str(distancia_R) + ' Speed ' + str(speed * pow(-1, direccion))
-        envia(ser,comando, 0.05)
 
+    print "Rot_angle: " + str(rot_ang * 180/3.1415)
+
+    if rot_ang > threshold_ang and rot_ang < (-threshold_ang % (2 * 3.1415)):
+
+        # Calculamos la k responsable del giro del robot
+        # Si es menor que 180 la distancia minimoa giramos hacia la izquierda
+        if (rot_ang <= 3.1415):
+            k = rot_ang/3.1414
+        # Si es mayor que 180 hacia la derecha por eso aparece el negativo delante
+        else:
+            k = -(2 * 3.1415 - rot_ang)/3.1415
+
+        speed = 200
+        maxDist = 400
+        leftMotorDist = maxDist * k
+        rightMotorDist = -maxDist * k
+
+        comando = 'SetMotor LWheelDist ' + str(leftMotorDist) + ' RWheelDist ' + str(rightMotorDist) + ' Speed ' + str(speed)
+        envia(ser,comando, 0.05)
         return 1 # Seguimos en estado ORIENTACION
     else:
         speed = 0
@@ -186,9 +231,9 @@ def orientationToBase():
 
         distancia_L = 0
         distancia_R = 0
+
         envia(ser,'SetMotor LWheelDisable RWheelDisable', 0.05)
         envia(ser,'SetMotor RWheelEnable LWheelEnable', 0.05)
-
         return 2 # Pasamos a estad ACERCAMIENTO
 
 def aproachToBase():
@@ -197,15 +242,18 @@ def aproachToBase():
     print('x_w: {} y_w: {} theta: {}'.format(x_w, y_w, sum_theta))
     print "Dist: " + str(dist)
     if dist > threshold_dist:
-        speed = 50
-        direccion = 0
-        tita_dot = 0
 
-        distancia_R = (((speed * pow(-1, direccion) ) + (S * tita_dot)) * tiempo) * pow(-1, direccion)
-        distancia_L = (((speed * pow(-1, direccion) ) + (-S * tita_dot)) * tiempo) * pow(-1, direccion)
-        comando = 'SetMotor LWheelDist ' + str(distancia_L) + ' RWheelDist ' + str(distancia_R) + ' Speed ' + str(speed * pow(-1, direccion))
+        if (dist < 2 * threshold_dist):
+            k = (dist - threshold_dist)/threshold_dist
+        else: k = 1
+
+        speed = 200
+        maxDist = 400
+        leftMotorDist = maxDist * k
+        rightMotorDist = maxDist * k
+
+        comando = 'SetMotor LWheelDist ' + str(leftMotorDist) + ' RWheelDist ' + str(rightMotorDist) + ' Speed ' + str(speed)
         envia(ser,comando, 0.05)
-
         return 2 # Seguimos en estado ACERCAMIENTO
     else:
         speed = 0
@@ -217,7 +265,92 @@ def aproachToBase():
         envia(ser,'SetMotor LWheelDisable RWheelDisable', 0.05)
         envia(ser,'SetMotor RWheelEnable LWheelEnable', 0.05)
 
-        return 6 # Pasamos a estado BUSQUEDACONTROL
+        return 3 # Pasamos a estado BUSQUEDACONTROL
+
+def orientationInverseToBase():
+    global x_base, y_base, x_w, y_w, sum_theta, speed, direccion, tita_dot, threshold_ang
+    rot_ang = atan2((y_base - y_w), (x_base - x_w))
+    if (rot_ang < 0):
+        rot_ang = 2 * 3.1415 + rot_ang
+    rot_ang = (rot_ang - sum_theta) % (2 * 3.1415)
+
+    print "Rot_angle: " + str(rot_ang * 180/3.1415)
+
+    if rot_ang < (3.1415 - threshold_ang ) or rot_ang > (3.1415 + threshold_ang):
+        # Calculamos la k responsable del giro del robot
+        # Si es menor que 180 la distancia minimoa giramos hacia la izquierda
+        if (rot_ang <= 3.1415):
+            k = 1 - rot_ang/3.1414
+        # Si es mayor que 180 hacia la derecha por eso aparece el negativo delante
+        else:
+            k = -(1 - (2 * 3.1415 - rot_ang)/3.1415)
+
+        speed = 200
+        maxDist = 400
+        leftMotorDist = maxDist * k
+        rightMotorDist = -maxDist * k
+
+        comando = 'SetMotor LWheelDist ' + str(leftMotorDist) + ' RWheelDist ' + str(rightMotorDist) + ' Speed ' + str(speed)
+        envia(ser,comando, 0.05)
+        return 4 # Seguimos en estado ORIENTACION2
+    else:
+        speed = 0
+        direccion = 0
+        tita_dot = 0
+
+        distancia_L = 0
+        distancia_R = 0
+
+        envia(ser,'SetMotor LWheelDisable RWheelDisable', 0.05)
+        envia(ser,'SetMotor RWheelEnable LWheelEnable', 0.05)
+        return 5 # Pasamos a estado ACERCAMIENTO2
+
+def aproachToBaseWithLaser():
+    global x_base, y_base, x_w, y_w, sum_theta, speed, direccion, tita_dot, thLaserCentralExt, thLaserCentralInt, thLaserLateralInt
+
+    sensorInformation = informationToArray(envia(ser, 'GetLDSScan', 0.05))
+    centralDist = getMedianDist(sensorInformation, 160, 200)
+
+    if centralDist < thLaserCentralExt:
+        if centralDist < thLaserCentralInt:
+            envia(ser,'SetMotor LWheelDisable RWheelDisable', 0.05)
+            return 6 # Pasamos a estado FINAL
+        else:
+            leftDist = getMedianDist(sensorInformation, 80, 100)
+            rightDist = getMedianDist(sensorInformation, 260, 280)
+
+            k1 = centralDist/thLaserCentralExt
+
+            if (leftDist > rightDist + thLaserLateralInt): k2 = 0.5
+            elif (rightDist > leftDist + thLaserLateralInt): k2 = -0.5
+            else: k2 = 0
+
+            speed = 100
+            maxCentralDist = 300
+            maxObsLateralDist = 100
+            # Calculamos cuanto se mueve cada rueda con ecuaciones lineales
+            leftMotorDist = -maxCentralDist * k1 + maxObsLateralDist * k2
+            rightMotorDist = -maxCentralDist * k1 - maxObsLateralDist * k2
+            comando = 'SetMotor LWheelDist ' + str(leftMotorDist) + ' RWheelDist ' + str(rightMotorDist) + ' Speed ' + str(speed)
+            envia(ser,comando, 0.05)
+            return 5 # Seguimos en estado ACERCAMIENTO2
+    else:
+        leftDist = getMinDist(sensorInformation, 90, 170)
+        rightDist = getMinDist(sensorInformation, 190, 270)
+
+        if (leftDist > rightDist + thLaserLateralExt): k2 = 0.5
+        elif (rightDist > leftDist + thLaserLateralExt): k2 = -0.5
+        else: k2 = 0
+
+        speed = 150
+        maxCentralDist = 300
+        maxObsLateralDist = 200
+        # Calculamos cuanto se mueve cada rueda con ecuaciones lineales
+        leftMotorDist = -maxCentralDist + maxObsLateralDist * k2
+        rightMotorDist = -maxCentralDist - maxObsLateralDist * k2
+        comando = 'SetMotor LWheelDist ' + str(leftMotorDist) + ' RWheelDist ' + str(rightMotorDist) + ' Speed ' + str(speed)
+        envia(ser,comando, 0.05)
+        return 5 # Seguimos en estado ACERCAMIENTO2
 
 def odometry(Lnew, Rnew):
     global L_ini, R_ini, S, V, Pk0
@@ -382,19 +515,24 @@ if __name__ == "__main__":
     V = [[0.01 ** 2, 0.],[0., 0.001 ** 2]]
     Pk0 = [[0.0001, 0.0001, 0.0001],[0.0001, 0.0001, 0.0001],[0.0001, 0.0001, 0.0001]]
 
-    x_w = 0
-    y_w = 0
-    sum_theta = 0
+
 
     pose_est1 = transpose([[x_w, y_w, sum_theta]])
     pose_t = transpose([[x_w, y_w, sum_theta]])
     Pk1 = Pk0
 
+    print("Introduce las coordenadas de la base de carga")
+    x_w = input("Coordenada x (mm):")
+    y_w = input("Coordenada y (mm):")
+    sum_theta = input("Orientacion theta (rad):")
+    # x_w = 0
+    # y_w = 0
+    # sum_theta = 0
+
     # Because input treatment
     q = Queue()
     p = Process(target=f, args=(q,))
     p.start()
-    #
 
     #Obtenemos distancia inicial de cada rueda
     L_ini, R_ini = get_motors()
@@ -434,10 +572,15 @@ if __name__ == "__main__":
             x_base = 0
             y_base = 0
             threshold_ang = 5 * 3.1415 / 180 # 5 grados
-            threshold_dist = 500
+            threshold_dist = 700
+            thLaserCentralExt = 500
+            thLaserCentralInt = 100 # 73 d'aquests son el propi tamany del robot
+            thLaserLateralInt = 20
+
             while estado_actual != 6: # Mientras no sea el estado final
                 # Computamos accion NEATO segun estado definido
                 estado_actual = vueltaBaseCarga(estado_actual)
+
                 # Actualizamos odometria a cada iteracion
                 L, R = get_motors()
                 odometry(L, R)
@@ -448,15 +591,16 @@ if __name__ == "__main__":
                 laser_queue.put(get_laser_data())
                 time.sleep(0.1)
 
-        envia(ser, 'TestMode Off', 0.1)
         envia(ser, 'SetLDSRotation Off', 0.1)
+        envia(ser, 'SetMotor LWheelDisable RWheelDisable', 0.1)
+        envia(ser, 'TestMode Off', 0.1)
         ser.close()
-
         viewer.quit()
-    except KeyboardInterrupt:
 
-        envia(ser, 'TestMode Off', 0.1)
+    except KeyboardInterrupt:
         envia(ser, 'SetLDSRotation Off', 0.1)
+        envia(ser, 'SetMotor LWheelDisable RWheelDisable', 0.1)
+        envia(ser, 'TestMode Off', 0.1)
         ser.close()
 
         viewer.quit()
