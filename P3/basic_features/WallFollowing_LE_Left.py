@@ -114,6 +114,7 @@ if __name__ == '__main__':
 
             # Calculamos la constante k1 responsable de girar a la derecha cuando haya un muro delante
             if -1 < centralDist < thCentralDistWall: k1 = 1 - centralDist/thCentralDistWall
+            elif -1 < diagDist < thDiagDistWall: k1 = 1 - diagDist/thDiagDistWall
             else: k1 = 0
 
             # Calculamos k2 responsable de mantener la distancia con el muro lateral
@@ -133,6 +134,8 @@ if __name__ == '__main__':
             # Calculamos cuanto se mueve cada rueda con ecuaciones lineales, notar que hay una distancia fija pq las 3 Ki pueden ser 0
             leftMotorDist =  constWallDist + maxWallCentralDist * k1 - maxWallLateralDist * k2 - maxWallDiagDist * k3
             rightMotorDist = constWallDist - maxWallCentralDist * k1 + maxWallLateralDist * k2 + maxWallDiagDist * k3
+
+            print "leftMotorDist: " + str(leftMotorDist) + " rightMotorDist: " + str(rightMotorDist)
 
             # Enviamos la orden al robot
             envia(ser, 'SetMotor LWheelDist ' + str(leftMotorDist) + ' RWheelDist ' + str(rightMotorDist) + ' Speed ' + str(maxWallSpeed), 0.05)

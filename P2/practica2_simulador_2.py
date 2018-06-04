@@ -121,7 +121,7 @@ def get_laser_data():
         if 0 < dist_laser < 16627:
             x = x_w + dist_laser * cos(angle_laser - sum_theta)
             y = y_w + dist_laser * sin(angle_laser - sum_theta)
-            laser_points.append((x, -y))
+            laser_points.append((-y, x))
     return laser_points
 
 # Obtenemos la distancia media de los valores leidos por un rango de angulos del sensor
@@ -515,19 +515,20 @@ if __name__ == "__main__":
     V = [[0.01 ** 2, 0.],[0., 0.001 ** 2]]
     Pk0 = [[0.0001, 0.0001, 0.0001],[0.0001, 0.0001, 0.0001],[0.0001, 0.0001, 0.0001]]
 
-
-
-    pose_est1 = transpose([[x_w, y_w, sum_theta]])
-    pose_t = transpose([[x_w, y_w, sum_theta]])
-    Pk1 = Pk0
-
-    print("Introduce las coordenadas de la base de carga")
+    print("Introduce las coordenadas iniciales")
     x_w = input("Coordenada x (mm):")
     y_w = input("Coordenada y (mm):")
     sum_theta = input("Orientacion theta (rad):")
     # x_w = 0
     # y_w = 0
     # sum_theta = 0
+
+
+
+    pose_est1 = transpose([[x_w, y_w, sum_theta]])
+    pose_t = transpose([[x_w, y_w, sum_theta]])
+    Pk1 = Pk0
+
 
     # Because input treatment
     q = Queue()
@@ -550,7 +551,7 @@ if __name__ == "__main__":
 
             # Enviamos al servidor la nueva posicion del robot (calculada por la odometria)
             # (Modificado http_viewer -> JSON lee (x, y), antes leia (y, x)
-            pose_queue.put([(x_w, -y_w)])
+            pose_queue.put([(-y_w, x_w)])
             # Enviamos al servidor los puntos detectados por el laser en esta iteracion
             laser_queue.put(get_laser_data())
             # Espera de 0.1s para que el servidor reciva los datos
@@ -587,7 +588,7 @@ if __name__ == "__main__":
 
                 L_ini, R_ini = L, R
 
-                pose_queue.put([(x_w, -y_w)])
+                pose_queue.put([(-y_w, x_w)])
                 laser_queue.put(get_laser_data())
                 time.sleep(0.1)
 
