@@ -36,29 +36,32 @@ def getMedianDist(info, minVal, maxVal):
     else: return -1
 
 def getMinDist(info):
-    global robotFrontDist, numConsecSensors, maxNumSensorsWithoutData
+    global numConsecSensors, maxNumSensorsWithoutData
     aux = []
     for i in range(2, 362):
         if 0 < int(info[i][1]) < 16627: aux.append((int(info[i][0]), (int(info[i][1]))))
     
-	auxlist = []
-	for i in range(len(aux)):
-		auxlist.append(aux[i][0])
-	
-    auxSet = set(auxlist)
-    i = len(aux) - 1
-    while i >= 0:
-        k = 0
-        print("{} {} {}".format(i, -(numConsecSensors / 2), (numConsecSensors / 2)))
-        for j in range(-(numConsecSensors / 2), (numConsecSensors / 2)):
-            if (j % 360) not in auxSet: k += 1
-        if k > maxNumSensorsWithoutData: aux.pop(i)
-        --i
+    wall = set([])
+    for i in range(len(aux)):
+        holesDetected = 0
+        for j in range(numberConsecSensors):
+            mod = (i + j) % len(aux)
+            if mod = 0:
+                if aux[mod][0] != aux[len(aux) - 1][0] + 1: holesDetected += aux[mod][0] - aux[mod - 1][0]
+            else:
+                if aux[mod][0] != aux[mod - 1][0] + 1: holesDetected += aux[mod][0] - aux[mod - 1][0]
+        
+        if holesDetected < maxNumSensorsWithoutData:
+            for j in range(numberConsecSensors):
+                mod = (i + j) % len(aux)
+                wall.add(aux[mod])
+            
 
-    if len(aux) > 0:
-        minim = aux[0]
-        for i in range(1, len(aux)):
-            if minim[1] > aux[i][1]: minim = aux[i]
+    final_aux = [x for x in aux if x not in wall]
+    if len(final_aux) > 0:
+        minim = final_aux[0]
+        for i in range(1, len(final_aux)):
+            if minim[1] > final_aux[i][1]: minim = final_aux[i]
 
         return minim
     else: return (0, robotFrontDist)
