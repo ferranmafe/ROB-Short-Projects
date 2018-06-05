@@ -36,35 +36,46 @@ def getMedianDist(info, minVal, maxVal):
     else: return -1
 
 def getMinDist(info):
-    global numConsecSensors, maxNumSensorsWithoutData
-    aux = []
-    for i in range(2, 362):
-        if 0 < int(info[i][1]) < 16627: aux.append((int(info[i][0]), (int(info[i][1]))))
+    global robotFrontDist, groupSize, numSimSens
+    wallTh = 800
     
-    wall = set([])
-    for i in range(len(aux)):
-        holesDetected = 0
-        for j in range(numberConsecSensors):
-            mod = (i + j) % len(aux)
-            if mod = 0:
-                if aux[mod][0] != aux[len(aux) - 1][0] + 1: holesDetected += aux[mod][0] - aux[mod - 1][0]
+    aux = [None] * 360
+    for i in range(2, 362):
+        if 0 < int(info[i][1]) < 16602: aux[int(info[i][0])] = int(info[i][1])
+    
+    sensors = []
+    for i in range(len(aux)/groupSize):
+        values = []
+        for j in range(groupSize):
+            mod = (i + j) % 360
+            if aux[j] is not None:
+                values.append(aux[j])
+        if (len(values) > 0): sensors.append(float(sum(values))/len(values))
+        else: sensors.append(None)
+    
+    similarSensors = {}
+    currentSensor = 0 
+    for i in range(len(sensors)):
+        j = 0
+        differentSens = False
+        while j < numSimSens and not differentSens:
+            current = (i + j) % len(sensors)
+            next = (i + j + 1) % len(sensors)
+            if sensors[current] is None:
+                ++j
+                
+            elif sensors[next] is None:
+                differentSens = True
+                similarSensors[currentSensor].append(current)
+                currentSensor += 1
             else:
-                if aux[mod][0] != aux[mod - 1][0] + 1: holesDetected += aux[mod][0] - aux[mod - 1][0]
-        
-        if holesDetected < maxNumSensorsWithoutData:
-            for j in range(numberConsecSensors):
-                mod = (i + j) % len(aux)
-                wall.add(aux[mod])
+                if 
+                similarSensors[currentSensor].append(next)
             
-
-    final_aux = [x for x in aux if x not in wall]
-    if len(final_aux) > 0:
-        minim = final_aux[0]
-        for i in range(1, len(final_aux)):
-            if minim[1] > final_aux[i][1]: minim = final_aux[i]
-
-        return minim
-    else: return (0, robotFrontDist)
+        
+    
+    for i in range(len(sensors))
+        
 
 def informationToArray (info):
     aux = info.split('\n')
@@ -88,8 +99,8 @@ if __name__ == '__main__':
     maxDist = 400
 
     robotFrontDist = 245
-    numConsecSensors = 40
-    maxNumSensorsWithoutData = 5
+    groupSize = 10
+    numSimSens = 3
 
     leftMotorDist = maxDist
     rightMotorDist = maxDist
@@ -100,7 +111,7 @@ if __name__ == '__main__':
 
             minDist = getMinDist(data)
             print("Min Dist: {}".format(minDist))
-            """
+            
             if (minDist[0] <= 180):
                 k = minDist[0]/180.
             else:
@@ -109,7 +120,7 @@ if __name__ == '__main__':
             leftMotorDist = -maxDist * k + (minDist[1] - robotFrontDist)
             print("leftMotorDist: {} rightMotorDist: {}".format(rightMotorDist, leftMotorDist))
             envia(ser, 'SetMotor LWheelDist ' + str(leftMotorDist) + ' RWheelDist ' + str(rightMotorDist) + ' Speed ' + str(maxSpeed), 0.05)
-            """
+            
 
     except KeyboardInterrupt:
         envia(ser, 'SetLDSRotation Off', 0.2)
