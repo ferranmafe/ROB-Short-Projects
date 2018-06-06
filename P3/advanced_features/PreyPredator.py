@@ -48,35 +48,48 @@ def getMinDist(info):
         values = []
         for j in range(groupSize):
             mod = (i + j) % 360
-            if aux[j] is not None:
-                values.append(aux[j])
+            if aux[mod] is not None:
+                values.append(aux[mod])
         if (len(values) > 0): sensors.append(float(sum(values))/len(values))
         else: sensors.append(None)
     
-    similarSensors = {}
-    currentSensor = 0 
-    for i in range(len(sensors)):
-        j = 0
-        differentSens = False
-        while j < numSimSens and not differentSens:
-            current = (i + j) % len(sensors)
-            next = (i + j + 1) % len(sensors)
-            if sensors[current] is None:
-                ++j
-                
-            elif sensors[next] is None:
-                differentSens = True
-                similarSensors[currentSensor].append(current)
-                currentSensor += 1
-            else:
-                if 
-                similarSensors[currentSensor].append(next)
-            
+    set = {}
+    sensorsChecked = [False] * len(sensors)
+    while not all(item for item in sensorsChecked):
+        i = getNextNotCheckedIndex(sensorsChecked)
+        if sensors[i] is not None:
+            act = sensors[i]
+            muro = True
+            j = 1
+            while j < numSimSens and muro:
+                mod = (i + j) % len(sensors)
+                if sensors[mod] is None:
+                    muro = False
+                elif abs(sensors[mod] - act) > wallTh:
+                    muro = False
+                else:
+                    act = sensors[mod]
+                    j += 1
+                    
+            if muro:
+                for j in range(numSimSens):
+                    set.add((i + j)% len(sensors))
         
+        sensorsChecked[i] = True
     
-    for i in range(len(sensors))
+    if (len(final_sensors) > 0):
+        minim = final_sensors[0]
+        for i in range(len(final_sensors)):
+            if minim[1] > final_sensors[i][1]:
+                minim = final_sensors[i]
+        return minim
         
+    else: return (0, robotFrontDist)
 
+def getNextNotCheckedIndex(array):
+    for i in range(array):
+        if not array[i]: return i
+    return -1
 def informationToArray (info):
     aux = info.split('\n')
     output = []
@@ -111,7 +124,7 @@ if __name__ == '__main__':
 
             minDist = getMinDist(data)
             print("Min Dist: {}".format(minDist))
-            
+            """
             if (minDist[0] <= 180):
                 k = minDist[0]/180.
             else:
@@ -120,7 +133,7 @@ if __name__ == '__main__':
             leftMotorDist = -maxDist * k + (minDist[1] - robotFrontDist)
             print("leftMotorDist: {} rightMotorDist: {}".format(rightMotorDist, leftMotorDist))
             envia(ser, 'SetMotor LWheelDist ' + str(leftMotorDist) + ' RWheelDist ' + str(rightMotorDist) + ' Speed ' + str(maxSpeed), 0.05)
-            
+            """
 
     except KeyboardInterrupt:
         envia(ser, 'SetLDSRotation Off', 0.2)
