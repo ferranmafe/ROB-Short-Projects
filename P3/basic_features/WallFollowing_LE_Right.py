@@ -143,5 +143,4 @@ if __name__ == '__main__':
             envia(ser, 'SetMotor LWheelDist ' + str(leftMotorDist) + ' RWheelDist ' + str(rightMotorDist) + ' Speed ' + str(maxWallSpeed), 0.05)
 
     except KeyboardInterrupt:
-        envia(ser,'SetMotor LWheelDisable RWheelDisable', 0.05)
         envia(ser, 'SetLDSRotation Off', 0.05)

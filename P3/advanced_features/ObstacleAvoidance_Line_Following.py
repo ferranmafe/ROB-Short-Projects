@@ -104,6 +104,8 @@ def odometry(Lnew, Rnew):
     sum_theta = sum_theta + delta_th + V[1][1]
     if (sum_theta < 0):
         sum_theta += 2 * 3.1415
+    elif (sum_theta > 2 * 3.1415):
+        sum_theta -= 2 * 3.1415
     pose_t = transpose([[x_w, y_w, sum_theta]])
 
 # Obtenemos la distancia media de los valores leidos por un rango de angulos del sensor
@@ -149,17 +151,18 @@ def informationToArray (info):
 
 # Funcion que engloba toda la actualizacion de la odometria (llamar a cada iteracion del bucle)
 def updateOdometry():
-    global L_ini, R_ini
+    global L_ini, R_ini, x_w, y_w, sum_theta
     L, R = get_motors()
     # Calculamos la odometria (con incertidumbre)
     odometry(L, R)
     # Actualizamos los valores L_ini, R_ini con L y R para poder calcular el siguiente incremento
     L_ini, R_ini = L, R
+    print str(x_w) + " " + str(y_w) + " " + str(sum_theta)
 
 # Funcion que implementa un wall following (muro izquierdo) modificado para parar cuando ha recuperado direccion inicial
 # La idea es evitar el obstaculo resiguiendolo como si fuera un muro
-def followObstacleLeft():
-    print "Entro follow Left"
+def followObstacleRight():
+    print "Entro follow Right"
     global maxWallSpeed, constWallDist, maxWallCentralDist, maxWallDiagDist, maxWallLateralDist
     global thLateralDistWall, thCentralDistWall, thDiagDistWall, thRangeWall, y_w, y_w_th
 
@@ -170,8 +173,8 @@ def followObstacleLeft():
 
     # Obtenemos la informacion de los sensores: central, lateral izquierdo y diagonal izquierdo
     sensorInformation = informationToArray(envia(ser, 'GetLDSScan', 0.05))
-    leftDist = getMedianDist(sensorInformation, 60, 110)
-    diagDist = getMedianDist(sensorInformation, 20, 60)
+    rightDist = getMedianDist(sensorInformation,  250, 300)
+    diagDist = getMedianDist(sensorInformation,  300, 340)
     centralDist = getMedianDist(sensorInformation, 340, 20)
 
     # Ejecucion inicial en busqueda de un muro, mientras las distancias no sean inferiores
@@ -191,10 +194,10 @@ def followObstacleLeft():
         envia(ser, 'SetMotor LWheelDist ' + str(leftMotorDist) + ' RWheelDist ' + str(rightMotorDist) + ' Speed ' + str(maxWallSpeed), 0.05)
 
 
-    while not avoided or fabs(y_w) > y_w_th:
+    while not avoided or y_w > y_w_th:
         updateOdometry()
 
-        if (fabs(y_w) > y_w_th):
+        if (y_w > y_w_th):
             avoided = True
 
         # Obtenemos la informacion de los sensores: central, lateral derecho y diagonal derecho
@@ -205,6 +208,7 @@ def followObstacleLeft():
 
         # Calculamos la constante k1 responsable de girar a la izquierda cuando haya un muro delante
         if -1 < centralDist < thCentralDistWall: k1 = 1 - centralDist/thCentralDistWall
+        elif -1 < diagDist < thDiagDistWall: k1 = 1 - diagDist/thDiagDistWall
         else: k1 = 0
 
         # Calculamos k2 responsable de mantener la distancia con el muro lateral
@@ -227,12 +231,12 @@ def followObstacleLeft():
 
         envia(ser, 'SetMotor LWheelDist ' + str(leftMotorDist) + ' RWheelDist ' + str(rightMotorDist) + ' Speed ' + str(maxWallSpeed), 0.05)
 
-    print "Salgo follow Left"
+    print "Salgo follow Right"
 
 # Funcion que implementa un wall following (muro derecho) modificado para parar cuando ha recuperado direccion inicial
 # La idea es evitar el obstaculo resiguiendolo como si fuera un muro
-def followObstacleRight():
-    print "Entro follow Right"
+def followObstacleLeft():
+    print "Entro follow Left"
     global maxWallSpeed, constWallDist, maxWallCentralDist, maxWallDiagDist, maxWallLateralDist
     global thLateralDistWall, thCentralDistWall, thDiagDistWall, thRangeWall, y_w, y_w_th
 
@@ -264,10 +268,10 @@ def followObstacleRight():
         envia(ser, 'SetMotor LWheelDist ' + str(leftMotorDist) + ' RWheelDist ' + str(rightMotorDist) + ' Speed ' + str(maxWallSpeed), 0.05)
 
 
-    while not avoided or fabs(y_w) > y_w_th:
+    while not avoided or y_w < -y_w_th:
         updateOdometry()
 
-        if (fabs(y_w) > y_w_th):
+        if y_w < -y_w_th:
             avoided = True
 
         # Obtenemos la informacion de los sensores: central, lateral izquierdo y diagonal izquierdo
@@ -278,6 +282,7 @@ def followObstacleRight():
 
         # Calculamos la constante k1 responsable de girar a la derecha cuando haya un muro delante
         if -1 < centralDist < thCentralDistWall: k1 = 1 - centralDist/thCentralDistWall
+        elif -1 < diagDist < thDiagDistWall: k1 = 1 - diagDist/thDiagDistWall
         else: k1 = 0
 
         # Calculamos k2 responsable de mantener la distancia con el muro lateral
@@ -295,13 +300,13 @@ def followObstacleRight():
         print "K's -> k1: " + str(k1) + " k2: " + str(k2) + " k3: " + str(k3)
 
         # Calculamos cuanto se mueve cada rueda con ecuaciones lineales, notar que hay una distancia fija pq las 3 Ki pueden ser 0
-        leftMotorDist =  constWallDist - maxWallCentralDist * k1 + maxWallLateralDist * k2 + maxWallDiagDist * k3
-        rightMotorDist = constWallDist + maxWallCentralDist * k1 - maxWallLateralDist * k2 - maxWallDiagDist * k3
+        leftMotorDist =  constWallDist + maxWallCentralDist * k1 - maxWallLateralDist * k2 - maxWallDiagDist * k3
+        rightMotorDist = constWallDist - maxWallCentralDist * k1 + maxWallLateralDist * k2 + maxWallDiagDist * k3
 
         # Enviamos la orden al robot
         envia(ser, 'SetMotor LWheelDist ' + str(leftMotorDist) + ' RWheelDist ' + str(rightMotorDist) + ' Speed ' + str(maxWallSpeed), 0.05)
 
-    print "Salgo follow Right"
+    print "Salgo follow Left"
 
 if __name__ == '__main__':
     global ser
@@ -329,7 +334,7 @@ if __name__ == '__main__':
     ###########################
     ##### ObstacleAvoidance params #####
     # Velocidad y ditancia maxima a recorrer al enviar una orden
-    maxObsSpeed = 250
+    maxObsSpeed = 100
     # Parametros que controlan el orden de magnitud de cada ki definida en la ecuacion lineal de movimiento
     maxObsCentralDist = 350
     maxObsLateralDist = 100
@@ -344,7 +349,7 @@ if __name__ == '__main__':
     # Parametros que controlan el orden de magnitud de cada ki definida en la ecuacion lineal de movimiento
     maxWallCentralDist = 700
     maxWallDiagDist = 200
-    maxWallLateralDist = 100
+    maxWallLateralDist = 150
     # Distancias threshold que provocan modificaciones en el movimiento
     thLateralDistWall = 500
     thCentralDistWall = 900
@@ -353,7 +358,7 @@ if __name__ == '__main__':
     ###############################
     ##### Repositioning param #####
     y_w_th = 50 # 5 centimetros de margen
-    sum_theta_th = 3 * 3.1415 / 180 # Threshold de 3 grados
+    sum_theta_th = 5 * 3.1415 / 180 # Threshold de 3 grados
 
 
     #Obtenemos distancia inicial de cada rueda
@@ -386,7 +391,6 @@ if __name__ == '__main__':
         while 1:
             # Siempre acutalizamos la odometria
             updateOdometry()
-
             # Comportamiento de obstacleAvoidance si el angulo girado del robot es 0 +- threshold
             if sum_theta < sum_theta_th or sum_theta > (2 * 3.1415 - sum_theta_th):
                 # Obtenemos la informacion de los sensores: central, diagonal izquierdo y diagonal derecho

@@ -127,5 +127,4 @@ if __name__ == '__main__':
             envia(ser, comando, 0.05)
 
     except KeyboardInterrupt:
-        envia(ser,'SetMotor LWheelDisable RWheelDisable', 0.05)
         envia(ser, 'SetLDSRotation Off', 0.05)

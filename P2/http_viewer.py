@@ -30,7 +30,7 @@ class HttpViewer(object):
         """ Start point of the thread that manages the http server. """
         Handler = http_server.HttpServerHandler
         self.httpd = SocketServer.TCPServer(("", self.port), Handler)
-             
+
         self.httpd.serve_forever()
 
 
@@ -46,10 +46,10 @@ class HttpViewer(object):
 
             if len(laser_points) > 1000:
                 laser_points = laser_points[360:]
-                print "Laser len:", len(laser_points)    
+                print "Laser len:", len(laser_points)
 
             write_points_json(laser_points, self.mm_per_pixel, "laserPoints", "laser.json")
-        
+
 
     def main_pose(self):
         """ Start point of the thread that gets the pose points. """
@@ -70,13 +70,13 @@ class HttpViewer(object):
         sys.stdout = open('http_log.txt', 'w')
         self.thread = threading.Thread(target=self.main_http_server)
         self.thread.start()
-        
+
         self.thread_laser = threading.Thread(target=self.main_laser)
         self.thread_laser.start()
-        
+
         self.thread_pose = threading.Thread(target=self.main_pose)
         self.thread_pose.start()
-        
+
         while not self.exit:
             time.sleep(0.4)
 
@@ -119,7 +119,7 @@ if __name__ == "__main__":
     def pose_test():
         x = random.randint(-400, 400)
         y = random.randint(-400, 400)
-        
+
         return [(x,y)]
 
     laser_queue = Queue()
@@ -138,7 +138,3 @@ if __name__ == "__main__":
 
         n_laser += 360
         n_pose += 1
-
-
-
-

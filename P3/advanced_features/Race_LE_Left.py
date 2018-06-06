@@ -56,10 +56,8 @@ if __name__ == '__main__':
     envia(ser, 'SetLDSRotation On', 0.3)
 
     ##### WallFollowing params #####
-    # Nota: Codigo de WallFollowing con parametros modificados para augmentar velocidad
-    ################################
     # Velocidad y ditancia maxima a recorrer al enviar una orden
-    maxWallSpeed = 300
+    maxWallSpeed = 200
     constWallDist = 300
     # Parametros que controlan el orden de magnitud de cada ki definida en la ecuacion lineal de movimiento
     maxWallCentralDist = 700
@@ -116,6 +114,7 @@ if __name__ == '__main__':
 
             # Calculamos la constante k1 responsable de girar a la derecha cuando haya un muro delante
             if -1 < centralDist < thCentralDistWall: k1 = 1 - centralDist/thCentralDistWall
+            elif -1 < diagDist < thDiagDistWall: k1 = 1 - diagDist/thDiagDistWall
             else: k1 = 0
 
             # Calculamos k2 responsable de mantener la distancia con el muro lateral
@@ -136,9 +135,10 @@ if __name__ == '__main__':
             leftMotorDist =  constWallDist + maxWallCentralDist * k1 - maxWallLateralDist * k2 - maxWallDiagDist * k3
             rightMotorDist = constWallDist - maxWallCentralDist * k1 + maxWallLateralDist * k2 + maxWallDiagDist * k3
 
+            print "leftMotorDist: " + str(leftMotorDist) + " rightMotorDist: " + str(rightMotorDist)
+
             # Enviamos la orden al robot
             envia(ser, 'SetMotor LWheelDist ' + str(leftMotorDist) + ' RWheelDist ' + str(rightMotorDist) + ' Speed ' + str(maxWallSpeed), 0.05)
 
     except KeyboardInterrupt:
-        envia(ser,'SetMotor LWheelDisable RWheelDisable', 0.05)
         envia(ser, 'SetLDSRotation Off', 0.05)
