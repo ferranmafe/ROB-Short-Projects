@@ -6,6 +6,8 @@ import serial
 import math
 import commands
 
+# Función que envia comandos al Neato durante un tiempo especificado por el usuario
+# (facilitada para el Short Project 2 por Antonio)
 def envia(ser, missatge,temps=0.1, show_time = False):
     first_time=time.time()
     rbuffer = ''
@@ -20,14 +22,21 @@ def envia(ser, missatge,temps=0.1, show_time = False):
         print("Round time: ",t)
     return rbuffer
 
+# Funcion que encuentra el objeto más cercano al neato, descartando muros
 def getMinDist(info):
-    global robotFrontDist, groupSize, numSimSens
-    wallTh = 800
-    
+    global robotFrontDist, groupSize, numSimSens, wallTh
+
+    # Nos definimos un vector auxiliar con 360 posiciones (una para cada grado que devuelve el scanner del Neato.
+    # Nos quedamos con los valores con valores coherentes, y el resto quedan como None
     aux = [None] * 360
     for i in range(2, 362):
         if 0 < int(info[i][1]) < 16602: aux[int(info[i][0])] = int(info[i][1])
-    
+
+    # Una vez tenemos los valores, los discretizamos haciendo grupos de tamaño groupSize. Cada sensor resultante
+    # de la discretización marcará como distancia la media de los valores usados para discretizar. Si en algun
+    # caso para un sensor todos los valores fueran None, el sensor tendría como valor None.
+    # Nota: el indice del vector de sensores indica a que angulo hace referencia el valor almacenado en ese indice,
+    # siendo el angulo del cada sensor su índice en el vector multiplicado por groupSize
     sensors = []
     for i in range(len(aux)/groupSize):
         values = []
@@ -37,8 +46,12 @@ def getMinDist(info):
                 values.append(aux[mod])
         if (len(values) > 0): sensors.append(float(sum(values))/len(values))
         else: sensors.append(None)
-    
-    set = {}
+
+    # Una vez tenemos los sensores discretizados recorremos el vector de sensores para buscar muros.
+    # Para cada sensor, recorremos tantos sensores como indique la variable (numSimSens), y si todos los
+    # sensores por los que pasamos son similares (No son None y su diferencia es menor al threshold) consideramos
+    # que están leyendo muro y lo guardamos en la variable wallSet
+    wallSet = {}
     sensorsChecked = [False] * len(sensors)
     while not all(item for item in sensorsChecked):
         i = getNextNotCheckedIndex(sensorsChecked)
@@ -58,15 +71,18 @@ def getMinDist(info):
                     
             if muro:
                 for j in range(numSimSens):
-                    set.add((i + j)% len(sensors))
+                    wallSet.add((i + j)% len(sensors))
         
         sensorsChecked[i] = True
 
+    # Una vez tenemso los muros, recuperamos los sensores que no detectan muro y no son nulos
     final_sensors = []
     for i in range(len(sensors)):
-        if i not in set and sensors[i] is not None:
+        if i not in wallSet and sensors[i] is not None:
             final_sensors.append((i * groupSize, sensors[i]))
 
+    # Finalmente, obtenemos la lectura más pequeña de los sensores leidos. Retornamos la tupla
+    # (angulo, distancia)
     if (len(final_sensors) > 0):
         minim = final_sensors[0]
         for i in range(len(final_sensors)):
@@ -76,11 +92,13 @@ def getMinDist(info):
         
     else: return (0, robotFrontDist)
 
+# Funcion que dado un vector de booleanos, retorna el indice del elemento a False. Si no hay ninguno retorna -1
 def getNextNotCheckedIndex(array):
     for i in range(array):
         if not array[i]: return i
     return -1
 
+# Función que dado un string de información de los laseres dada por el neato, retorna una matriz con esta informacion
 def informationToArray (info):
     aux = info.split('\n')
     output = []
@@ -91,24 +109,34 @@ def informationToArray (info):
 
 if __name__ == '__main__':
     global ser
-    # Open the Serial Port.
+    # Abrimos el puerto serie y activamos el modo de test y el sonido
     ser = serial.Serial(port='/dev/ttyACM0', baudrate=115200, timeout=0.1)
     envia(ser,'TestMode On', 0.2)
     envia(ser,'PlaySound 1', 0.3)
 
+    # Activamos los motores y los laseres
     envia(ser,'SetMotor RWheelEnable LWheelEnable', 0.2)
     envia(ser, 'SetLDSRotation On', 0.3)
 
+    # Velocidad máxima del robot
     maxSpeed = 200
+    # Distáncia máxima a recorrer en una solo comando para moverse al Neato
     maxDist = 400
 
+    # Constante que limita cuan cerca está el robot del obstaculo
     robotFrontDist = 245
+    # Numero de angulos a discretizar como un sensor
     groupSize = 10
+    # Numero de sensores con valores similares para ser considerados muro
     numSimSens = 3
+    # Threshold para marcar cuan diferentes han de ser dos lecturas consecutivas para ser considerado que no es un muro
+    wallTh = 800
 
+    # Inicializamos cada motor a una distáncia de maxDist
     leftMotorDist = maxDist
     rightMotorDist = maxDist
 
+    # Pedimos al usuario que rol quiere desempeñar
     playerType = raw_input('Please, type if you want to be "Prey" or "Predator":\n')
 
     while not (playerType == "Predator" or playerType == "Prey"):
@@ -116,29 +144,39 @@ if __name__ == '__main__':
 
     try:
         while 1:
+            # Recogemos los datos del laser y obtenemos la minima distáncia
             data = informationToArray(envia(ser, 'GetLDSScan', 0.05))
-
             minDist = getMinDist(data)
             print("Min Dist: {}".format(minDist))
 
+            # Si el rol es depredador
             if playerType == "Predator":
+                # Modificamos los valores de k para acercarnos a la distáncia mínima
                 if (minDist[0] <= 180):
                     k = minDist[0]/180.
                 else:
                     k = -(360 - minDist[0])/180.
+                # Computamos las ecuaciones lineales para calcular cuanto se ha de mover cada rueda
                 rightMotorDist = maxDist * k + (minDist[1] - robotFrontDist)
                 leftMotorDist = -maxDist * k + (minDist[1] - robotFrontDist)
                 print("leftMotorDist: {} rightMotorDist: {}".format(rightMotorDist, leftMotorDist))
+
+                # Enviamos el resultado al neato para que se mueva
                 envia(ser, 'SetMotor LWheelDist ' + str(leftMotorDist) + ' RWheelDist ' + str(rightMotorDist) + ' Speed ' + str(maxSpeed), 0.05)
 
+            # Si el rol es depredador
             elif playerType == "Prey":
+                # Modificamos los valores de k para alejarnos de la distáncia mínima
                 if (minDist[0] > 180):
                     k = minDist[0] / 180.
                 else:
                     k = -(360 - minDist[0]) / 180.
+                # Computamos las ecuaciones lineales para calcular cuanto se ha de mover cada rueda
                 rightMotorDist = maxDist * k + (minDist[1] - robotFrontDist)
                 leftMotorDist = -maxDist * k + (minDist[1] - robotFrontDist)
                 print("leftMotorDist: {} rightMotorDist: {}".format(rightMotorDist, leftMotorDist))
+
+                # Enviamos el resultado al neato para que se mueva
                 envia(ser, 'SetMotor LWheelDist ' + str(leftMotorDist) + ' RWheelDist ' + str(rightMotorDist) + ' Speed ' + str(maxSpeed), 0.05)
 
     except KeyboardInterrupt:
