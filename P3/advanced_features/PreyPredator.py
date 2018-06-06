@@ -20,21 +20,6 @@ def envia(ser, missatge,temps=0.1, show_time = False):
         print("Round time: ",t)
     return rbuffer
 
-
-def getMedianDist(info, minVal, maxVal):
-    aux = []
-    if (minVal < maxVal):
-        for i in range(minVal, maxVal):
-            if 0 < int(info[i][1]) < 16627: aux.append(int(info[i][1]))
-    else:
-        for i in range(minVal, 359):
-            if 0 < int(info[i][1]) < 16627: aux.append(int(info[i][1]))
-        for i in range(2, maxVal):
-            if 0 < int(info[i][1]) < 16627: aux.append(int(info[i][1]))
-
-    if len(aux) > 0: return float(sum(aux)) / max(len(aux), 1)
-    else: return -1
-
 def getMinDist(info):
     global robotFrontDist, groupSize, numSimSens
     wallTh = 800
@@ -76,7 +61,12 @@ def getMinDist(info):
                     set.add((i + j)% len(sensors))
         
         sensorsChecked[i] = True
-    
+
+    final_sensors = []
+    for i in range(len(sensors)):
+        if i not in set and sensors[i] is not None:
+            final_sensors.append((i * groupSize, sensors[i]))
+
     if (len(final_sensors) > 0):
         minim = final_sensors[0]
         for i in range(len(final_sensors)):
@@ -90,6 +80,7 @@ def getNextNotCheckedIndex(array):
     for i in range(array):
         if not array[i]: return i
     return -1
+
 def informationToArray (info):
     aux = info.split('\n')
     output = []
@@ -118,22 +109,37 @@ if __name__ == '__main__':
     leftMotorDist = maxDist
     rightMotorDist = maxDist
 
+    playerType = raw_input('Please, type if you want to be "Prey" or "Predator":\n')
+
+    while not (playerType == "Predator" or playerType == "Prey"):
+        playerType = raw_input('Role not recognized. Please, type if you want to be "Prey" or "Predator":\n')
+
     try:
         while 1:
             data = informationToArray(envia(ser, 'GetLDSScan', 0.05))
 
             minDist = getMinDist(data)
             print("Min Dist: {}".format(minDist))
-            """
-            if (minDist[0] <= 180):
-                k = minDist[0]/180.
-            else:
-                k = -(360 - minDist[0])/180.
-            rightMotorDist = maxDist * k + (minDist[1] - robotFrontDist)
-            leftMotorDist = -maxDist * k + (minDist[1] - robotFrontDist)
-            print("leftMotorDist: {} rightMotorDist: {}".format(rightMotorDist, leftMotorDist))
-            envia(ser, 'SetMotor LWheelDist ' + str(leftMotorDist) + ' RWheelDist ' + str(rightMotorDist) + ' Speed ' + str(maxSpeed), 0.05)
-            """
+
+            if playerType == "Predator":
+                if (minDist[0] <= 180):
+                    k = minDist[0]/180.
+                else:
+                    k = -(360 - minDist[0])/180.
+                rightMotorDist = maxDist * k + (minDist[1] - robotFrontDist)
+                leftMotorDist = -maxDist * k + (minDist[1] - robotFrontDist)
+                print("leftMotorDist: {} rightMotorDist: {}".format(rightMotorDist, leftMotorDist))
+                envia(ser, 'SetMotor LWheelDist ' + str(leftMotorDist) + ' RWheelDist ' + str(rightMotorDist) + ' Speed ' + str(maxSpeed), 0.05)
+
+            elif playerType == "Prey":
+                if (minDist[0] > 180):
+                    k = minDist[0] / 180.
+                else:
+                    k = -(360 - minDist[0]) / 180.
+                rightMotorDist = maxDist * k + (minDist[1] - robotFrontDist)
+                leftMotorDist = -maxDist * k + (minDist[1] - robotFrontDist)
+                print("leftMotorDist: {} rightMotorDist: {}".format(rightMotorDist, leftMotorDist))
+                envia(ser, 'SetMotor LWheelDist ' + str(leftMotorDist) + ' RWheelDist ' + str(rightMotorDist) + ' Speed ' + str(maxSpeed), 0.05)
 
     except KeyboardInterrupt:
         envia(ser, 'SetLDSRotation Off', 0.2)
