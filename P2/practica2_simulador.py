@@ -151,13 +151,108 @@ def vueltaBaseCarga(estado):
     elif estado == 2:
         estado = aproachToBase()
     elif estado == 3:
-        estado = 6
+        estado = selectDirectionToTurn()
     elif estado == 4:
-        estado = 6
+        estado = turn()
     elif estado == 5:
-        estado = 6
+        estado = rotateAroundTheBase()
+    elif estado == 6:
+        estado = 7
     return estado
 
+def getMinDist(info):
+    aux = []
+    if (minVal < maxVal):
+        for i in range(minVal, maxVal):
+            if 0 < int(info[i][1]) < 16627: aux.append(int(info[i][1]))
+    else:
+        for i in range(minVal, 359):
+            if 0 < int(info[i][1]) < 16627: aux.append(int(info[i][1]))
+        for i in range(2, maxVal):
+            if 0 < int(info[i][1]) < 16627: aux.append(int(info[i][1]))
+
+    if len(aux) > 0: return min(aux)
+    else: return -1  
+    
+def selectDirectionToTurn():
+    global directionToTurn, turnCurrent, suma_theta, turnGoal
+    left = getMinDist(sensorInformation, 250, 290)
+    right = getMinDist(sensorInformation, 70, 110)
+    
+    if (left < right) or right == -1: 
+        directionToTurn = 'rigth'
+        turnCurrent = suma_theta
+        turnGoal = suma_theta - 3.14 / 2
+    else: 
+        directionToTurn = 'left'
+        turnCurrent = suma_theta
+        turnGoal = suma_theta + 3.14 / 2
+    return 4
+
+def hasTurned():
+    global sum_theta, turnCurrent, turnGoal
+    return (turnGoal - turnError < turnCurrent < turnGoal + turnError)    
+    
+def turn():
+    global directionToTurn, speed, turnDistance, rad, x_base, y_base, x_w, y_w
+    if not hasTurned():
+        if directionToTurn == 'left':
+            comando = 'SetMotor LWheelDist ' + str(-turnDistance) + ' RWheelDist ' + str(turnDistance) + ' Speed ' + str(speed)
+            envia(ser,comando, 0.1)
+        else:
+            comando = 'SetMotor LWheelDist ' + str(turnDistance) + ' RWheelDist ' + str(-turnDistance) + ' Speed ' + str(speed)
+            envia(ser,comando, 0.1)
+        return 4
+    else: 
+        rad = sqrt(((x_base - x_w) ** 2) + ((y_base - y_w) ** 2))
+        return 5
+    
+def hasReachedPark():
+    global parkThreshold
+    aux = []
+    if (minVal < maxVal):
+        for i in range(minVal, maxVal):
+            if 0 < int(info[i][1]) < 16627: aux.append((int(info[i][0]), (int(info[i][1]))))
+
+    if len(aux) > 0: 
+        count = 0
+        min1 = -1
+        min2 = -1
+        for i in range(aux):
+            if i != 0 and i != len(aux) - 1:
+                if aux[i - 1] > aux[i] < aux[i + 1]:
+                    if count == 0 or count == 2 or count == 4: 
+                        count += 1
+                    else: count = 1
+                elif aux[i - 1] < aux[i] > aux[i + 1]:
+                    if count == 1 or count == 3: count += 1
+                    else: count = 0
+            else:
+                if i == 0:  count += 1
+                elif (i == len(aux) - 1) and (count == 4) and (aux[i] < aux[i - 1]): count += 1
+        
+    return False
+    
+def positionToParkReached()
+    global directionToTurn
+    points = []
+    if directionToTurn == 'left':
+        return hasReachedPark(sensorInformation, 250, 290)
+    else:
+        return hasReachedPark(sensorInformation, 70, 110)
+    
+def rotateAroundTheBase():
+    global speed, S, rad
+    if not positionToParkReached():
+        if directionToTurn == 'left':
+            comando = 'SetMotor LWheelDist ' + str(2 * 3.14 * (rad - S)) + ' RWheelDist ' + str(2 * 3.14 * (rad + S)) + ' Speed ' + str(speed)
+            envia(ser,comando, 0.1)
+        else:
+            comando = 'SetMotor LWheelDist ' + str(2 * 3.14 * (rad + S)) + ' RWheelDist ' + str(2 * 3.14 * (rad - S)) + ' Speed ' + str(speed)
+            envia(ser,comando, 0.1)
+        return 5
+    else: return 6
+            
 def orientationToBase():
     global x_base, y_base, x_w, y_w, sum_theta, speed, direccion, tita_dot, threshold_ang
     rot_ang = atan2((y_base - y_w), (x_base - x_w))
@@ -434,7 +529,13 @@ if __name__ == "__main__":
             y_base = 0
             threshold_ang = 5 * 3.1415 / 180 # 5 grados
             threshold_dist = 500
-            while estado_actual != 6: # Mientras no sea el estado final
+            directionToTurn = 'left'
+            turnDistance = 300
+            rad = 0
+            turnCurrent = 0
+            turnGoal = 0
+            parkThreshold = 50
+            while estado_actual != 7: # Mientras no sea el estado final
                 # Computamos accion NEATO segun estado definido
                 estado_actual = vueltaBaseCarga(estado_actual)
                 # Actualizamos odometria a cada iteracion
