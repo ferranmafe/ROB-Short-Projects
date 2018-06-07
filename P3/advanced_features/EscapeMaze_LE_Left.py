@@ -98,9 +98,6 @@ if __name__ == '__main__':
             diagDist = getMedianDist(sensorInformation, 20, 60)
             centralDist = getMedianDist(sensorInformation, 340, 20)
 
-            # Imprimimos informacion de control
-            print "Distancias-> central:" + str(centralDist) + " diagonal:" +  str(diagDist) + " lateral:" + str(leftDist)
-
             # Enviamos la orden al robot que se mueva recto
             envia(ser, 'SetMotor LWheelDist ' + str(leftMotorDist) + ' RWheelDist ' + str(rightMotorDist) + ' Speed ' + str(maxWallSpeed), 0.05)
 
@@ -127,15 +124,9 @@ if __name__ == '__main__':
             if diagDist < thDiagDistWall and diagDist != -1: k3 = 0
             else: k3 = 0.7
 
-            # Imprimimos informacion de control
-            print "Distancias-> central:" + str(centralDist) + " diagonal:" +  str(diagDist) + " lateral:" + str(leftDist)
-            print "K's -> k1: " + str(k1) + " k2: " + str(k2) + " k3: " + str(k3)
-
             # Calculamos cuanto se mueve cada rueda con ecuaciones lineales, notar que hay una distancia fija pq las 3 Ki pueden ser 0
             leftMotorDist =  constWallDist + maxWallCentralDist * k1 - maxWallLateralDist * k2 - maxWallDiagDist * k3
             rightMotorDist = constWallDist - maxWallCentralDist * k1 + maxWallLateralDist * k2 + maxWallDiagDist * k3
-
-            print "leftMotorDist: " + str(leftMotorDist) + " rightMotorDist: " + str(rightMotorDist)
 
             # Enviamos la orden al robot
             envia(ser, 'SetMotor LWheelDist ' + str(leftMotorDist) + ' RWheelDist ' + str(rightMotorDist) + ' Speed ' + str(maxWallSpeed), 0.05)
