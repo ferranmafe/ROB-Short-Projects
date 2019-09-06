@@ -42,9 +42,16 @@ until the moment that he reach it.
 
 #### Advanced Tasks (advaced_features_folder)
 ##### Obstacle Avoidance with Line Following
+The idea behind this task is do the same as in Obstacle Avoidance, but in this case keeping all the time the position and
+direction of the robot in the space by using odometry. After avoid the obstacle, the robot continues moving in the same direction
+as before avoiding the obstacle (basically the robot is following a line as much as possible).
 
 ##### Escape the Maze
+Code without changes from the task Wall Following (no improvement is needed).
 
 ##### Prey/Predator
+Combination of the tasks Obstacle Avoidance and Meet An Object. If the robot acts as prey the behaviour is the same as Obstacle Avoidance (but evading from
+every direction instead of evading only the objects in front of it). If the robot acts as predator the behaviour is the same as Meet an Object.
 
-##### Race (Left)
+##### Race
+Code without changes from the task Wall Following (no improvement is needed). The robot goes around a wall in order to do X laps before the other NEATO robots.
